@@ -1,10 +1,10 @@
 import type { EmailScanRequest, UrlScanRequest, DeepfakeScanRequest, ScanResult } from '@/types'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-const USE_MOCK = true // Set to false when backend is ready
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+const USE_MOCK = false // Set to false to use real backend
 
 // ============================================
-// REAL API CALLS (for when backend is ready)
+// REAL API CALLS (connected to your FastAPI backend)
 // ============================================
 
 export async function scanEmail(data: EmailScanRequest): Promise<ScanResult> {
@@ -12,19 +12,41 @@ export async function scanEmail(data: EmailScanRequest): Promise<ScanResult> {
     return mockScanEmail(data)
   }
 
-  const response = await fetch(`${API_BASE_URL}/phishing-scan`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  })
-  
-  if (!response.ok) {
-    throw new Error('Scan failed')
+  try {
+    const response = await fetch(`${API_BASE_URL}/phishing/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email_text: data.emailText,
+        sender: data.sender,
+        subject: data.subject
+      }),
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Scan failed')
+    }
+    
+    const result = await response.json()
+    
+    // Transform backend response to match frontend ScanResult type
+    return {
+      scanId: result.scan_id,
+      threatType: result.threat_type,
+      probability: result.probability,
+      riskScore: result.risk_score,
+      riskLevel: result.risk_level,
+      explanation: result.explanation,
+      recommendedActions: result.recommendations,
+      timestamp: result.timestamp
+    }
+  } catch (error) {
+    console.error('Email scan error:', error)
+    throw error
   }
-  
-  return response.json()
 }
 
 export async function scanUrl(data: UrlScanRequest): Promise<ScanResult> {
@@ -32,19 +54,38 @@ export async function scanUrl(data: UrlScanRequest): Promise<ScanResult> {
     return mockScanUrl(data)
   }
 
-  const response = await fetch(`${API_BASE_URL}/url-scan`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  })
-  
-  if (!response.ok) {
-    throw new Error('Scan failed')
+  try {
+    const response = await fetch(`${API_BASE_URL}/url/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: data.url
+      }),
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Scan failed')
+    }
+    
+    const result = await response.json()
+    
+    return {
+      scanId: result.scan_id,
+      threatType: result.threat_type,
+      probability: result.probability,
+      riskScore: result.risk_score,
+      riskLevel: result.risk_level,
+      explanation: result.explanation,
+      recommendedActions: result.recommendations,
+      timestamp: result.timestamp
+    }
+  } catch (error) {
+    console.error('URL scan error:', error)
+    throw error
   }
-  
-  return response.json()
 }
 
 export async function scanDeepfake(data: FormData): Promise<ScanResult> {
@@ -52,30 +93,171 @@ export async function scanDeepfake(data: FormData): Promise<ScanResult> {
     return mockScanDeepfake(data)
   }
 
-  const response = await fetch(`${API_BASE_URL}/deepfake-scan`, {
-    method: 'POST',
-    body: data,
-  })
-  
-  if (!response.ok) {
-    throw new Error('Scan failed')
+  try {
+    const response = await fetch(`${API_BASE_URL}/deepfake/scan`, {
+      method: 'POST',
+      body: data, // FormData with file and media_type
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Scan failed')
+    }
+    
+    const result = await response.json()
+    
+    return {
+      scanId: result.scan_id,
+      threatType: result.threat_type,
+      probability: result.probability,
+      riskScore: result.risk_score,
+      riskLevel: result.risk_level,
+      explanation: result.explanation,
+      recommendedActions: result.recommendations,
+      timestamp: result.timestamp
+    }
+  } catch (error) {
+    console.error('Deepfake scan error:', error)
+    throw error
   }
-  
+}
+
+// ============================================
+// AUTHENTICATION API CALLS
+// ============================================
+
+export interface LoginCredentials {
+  email: string
+  password: string
+}
+
+export interface SignupData {
+  email: string
+  password: string
+  name?: string
+}
+
+export interface AuthResponse {
+  access_token: string
+  token_type: string
+  user: {
+    id: string
+    email: string
+  }
+}
+
+export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Login failed')
+  }
+
+  return response.json()
+}
+
+export async function signup(data: SignupData): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Signup failed')
+  }
+
   return response.json()
 }
 
 // ============================================
-// MOCK API FUNCTIONS (for development)
+// USER DATA API CALLS
+// ============================================
+
+export async function getUserScans(token: string, limit: number = 10): Promise<ScanResult[]> {
+  const response = await fetch(`${API_BASE_URL}/scans?limit=${limit}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch scans')
+  }
+
+  const data = await response.json()
+  
+  // Transform backend scans to frontend format
+  return data.scans.map((scan: any) => ({
+    scanId: scan.id,
+    threatType: scan.threat_type,
+    probability: scan.probability,
+    riskScore: scan.risk_score,
+    riskLevel: scan.risk_level,
+    explanation: scan.explanation,
+    recommendedActions: scan.recommendations,
+    timestamp: scan.created_at
+  }))
+}
+
+export async function getThreatStats(token?: string): Promise<{
+  totalScans: number
+  threatsDetected: number
+  safeScans: number
+  averageRiskScore: number
+  threatBreakdown: {
+    phishing: number
+    maliciousUrl: number
+    deepfake: number
+  }
+}> {
+  const headers: HeadersInit = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${API_BASE_URL}/stats`, { headers })
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch stats')
+  }
+
+  return response.json()
+}
+
+// ============================================
+// HEALTH CHECK
+// ============================================
+
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`)
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+// ============================================
+// MOCK API FUNCTIONS (keep these for development/fallback)
 // ============================================
 
 // Mock Email Scan
 export async function mockScanEmail(data: EmailScanRequest): Promise<ScanResult> {
-  // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 2000))
   
   const text = data.emailText.toLowerCase()
   
-  // Comprehensive phishing detection logic
   const phishingIndicators = {
     urgentKeywords: ['urgent', 'immediately', 'suspended', 'verify', 'click here', 'action required'],
     suspiciousLinks: text.match(/https?:\/\/[^\s]+/g) || [],
@@ -84,13 +266,11 @@ export async function mockScanEmail(data: EmailScanRequest): Promise<ScanResult>
     spoofedDomains: ['secure-', 'verify-', 'account-', 'update-', 'login-', 'signin-']
   }
 
-  // Calculate various risk factors
   const urgencyScore = phishingIndicators.urgentKeywords.filter(word => text.includes(word)).length * 10
   const linkScore = phishingIndicators.suspiciousLinks.length * 15
   const threatScore = phishingIndicators.threatPhrases.filter(phrase => text.includes(phrase)).length * 8
   const grammarScore = phishingIndicators.grammaticalErrors.filter(error => text.includes(error)).length * 12
   
-  // Check for spoofed domains in links
   let spoofScore = 0
   phishingIndicators.suspiciousLinks.forEach(link => {
     if (phishingIndicators.spoofedDomains.some(domain => link.includes(domain))) {
@@ -98,13 +278,11 @@ export async function mockScanEmail(data: EmailScanRequest): Promise<ScanResult>
     }
   })
 
-  // Calculate total probability
   const totalScore = urgencyScore + linkScore + threatScore + grammarScore + spoofScore
   const probability = Math.min(totalScore / 100, 0.95)
   const riskScore = Math.round(probability * 100)
   const riskLevel = riskScore > 70 ? 'High' : riskScore > 40 ? 'Medium' : 'Low'
 
-  // Generate explanations
   const explanations = []
   if (urgencyScore > 10) explanations.push('Contains urgency language to pressure quick action')
   if (linkScore > 15) explanations.push(`Contains ${phishingIndicators.suspiciousLinks.length} suspicious links`)
@@ -140,7 +318,6 @@ export async function mockScanUrl(data: UrlScanRequest): Promise<ScanResult> {
   
   const url = data.url.toLowerCase()
   
-  // Suspicious patterns with weighted scoring
   const suspiciousPatterns = [
     { pattern: 'login', weight: 15 },
     { pattern: 'verify', weight: 15 },
@@ -158,7 +335,6 @@ export async function mockScanUrl(data: UrlScanRequest): Promise<ScanResult> {
     { pattern: '10.0.', weight: 30 }
   ]
   
-  // Calculate weighted suspicious score
   let suspiciousScore = 0
   suspiciousPatterns.forEach(({ pattern, weight }) => {
     if (url.includes(pattern)) {
@@ -171,7 +347,6 @@ export async function mockScanUrl(data: UrlScanRequest): Promise<ScanResult> {
   const hasMultipleSubdomains = (url.match(/\./g) || []).length > 3
   const hasSpecialChars = /[<>{}|\\^~\[\]`;@]/.test(url)
   
-  // Calculate probability
   let probability = suspiciousScore / 100
   if (!hasHttps) probability += 0.15
   if (hasIpAddress) probability += 0.3
@@ -220,12 +395,10 @@ export async function mockScanDeepfake(data: FormData): Promise<ScanResult> {
   const file = data.get('file') as File
   const mediaType = data.get('mediaType') as string
   
-  // Simulate analysis based on file properties
-  const fileSize = file.size / (1024 * 1024) // MB
+  const fileSize = file.size / (1024 * 1024)
   const fileName = file.name.toLowerCase()
   const fileExtension = fileName.split('.').pop() || ''
   
-  // Comprehensive deepfake indicators
   const suspiciousIndicators = [
     'ai', 'fake', 'generated', 'synthetic', 'deepfake', 
     'manipulated', 'edited', 'altered', 'synthesized'
@@ -236,21 +409,18 @@ export async function mockScanDeepfake(data: FormData): Promise<ScanResult> {
   const commonVideoExtensions = ['mp4', 'avi', 'mov', 'mkv']
   const commonAudioExtensions = ['mp3', 'wav', 'm4a', 'ogg']
   
-  // Check if extension matches claimed media type
   const extensionMismatch = mediaType === 'video' 
     ? !commonVideoExtensions.includes(fileExtension)
     : !commonAudioExtensions.includes(fileExtension)
   
-  // Calculate probability
-  let probability = 0.2 // base probability
+  let probability = 0.2
   
   if (suspiciousName) probability += 0.25
   if (unusualSize) probability += 0.2
   if (extensionMismatch) probability += 0.15
   
-  // Media-specific indicators
   if (mediaType === 'video') {
-    probability += 0.1 // video deepfakes are more common
+    probability += 0.1
   }
   
   probability = Math.min(probability, 0.95)
@@ -263,7 +433,6 @@ export async function mockScanDeepfake(data: FormData): Promise<ScanResult> {
   if (unusualSize) explanations.push(`File size (${fileSize.toFixed(1)}MB) is unusual for this media type`)
   if (extensionMismatch) explanations.push('File extension may not match actual content type')
   
-  // Detailed explanations based on media type
   if (mediaType === 'video') {
     explanations.push('Analyzing facial landmarks and movement patterns...')
     explanations.push('Checking for unnatural blinking and lip sync issues')
@@ -280,7 +449,7 @@ export async function mockScanDeepfake(data: FormData): Promise<ScanResult> {
     probability,
     riskScore,
     riskLevel,
-    explanation: explanations.slice(0, 4), // Show top 4 explanations
+    explanation: explanations.slice(0, 4),
     recommendedActions: riskScore > 50 ? [
       'Do not trust or share this media without verification',
       'Contact the person through alternative channels',
@@ -295,90 +464,7 @@ export async function mockScanDeepfake(data: FormData): Promise<ScanResult> {
   }
 }
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-// Get threat statistics (for dashboard)
-export async function getThreatStats(): Promise<{
-  totalScans: number
-  threatsDetected: number
-  safeScans: number
-  averageRiskScore: number
-  threatBreakdown: {
-    phishing: number
-    maliciousUrl: number
-    deepfake: number
-  }
-}> {
-  if (USE_MOCK) {
-    // Return mock statistics
-    return {
-      totalScans: 1234,
-      threatsDetected: 456,
-      safeScans: 778,
-      averageRiskScore: 42,
-      threatBreakdown: {
-        phishing: 234,
-        maliciousUrl: 156,
-        deepfake: 66
-      }
-    }
-  }
-
-  const response = await fetch(`${API_BASE_URL}/stats`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch stats')
-  }
-  return response.json()
-}
-
-// Get scan history
-export async function getScanHistory(limit: number = 10): Promise<ScanResult[]> {
-  if (USE_MOCK) {
-    // Return mock history
-    return [
-      {
-        scanId: '1',
-        threatType: 'phishing',
-        probability: 0.89,
-        riskScore: 89,
-        riskLevel: 'High',
-        explanation: ['Urgency language detected', 'Suspicious links found'],
-        recommendedActions: ['Do not click links'],
-        timestamp: new Date().toISOString()
-      },
-      {
-        scanId: '2',
-        threatType: 'malicious-url',
-        probability: 0.76,
-        riskScore: 76,
-        riskLevel: 'High',
-        explanation: ['Suspicious domain', 'No HTTPS'],
-        recommendedActions: ['Block domain'],
-        timestamp: new Date(Date.now() - 3600000).toISOString()
-      },
-      {
-        scanId: '3',
-        threatType: 'safe',
-        probability: 0.12,
-        riskScore: 12,
-        riskLevel: 'Low',
-        explanation: ['URL appears safe'],
-        recommendedActions: ['Proceed with caution'],
-        timestamp: new Date(Date.now() - 7200000).toISOString()
-      }
-    ]
-  }
-
-  const response = await fetch(`${API_BASE_URL}/history?limit=${limit}`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch history')
-  }
-  return response.json()
-}
-
-// Toggle mock mode (useful for development)
+// Toggle mock mode
 export function setMockMode(enabled: boolean) {
   (global as any).USE_MOCK = enabled
 }

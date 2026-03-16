@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 'use client'
 
 import { useState } from 'react'
@@ -12,6 +13,7 @@ import type { ScanResult } from '@/types'
 export default function DashboardPage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('email')
 
   return (
     <div className="space-y-8">
@@ -29,7 +31,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column - Scanner Inputs */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-200 dark:border-slate-700">
-          <Tabs defaultValue="email" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-3 mb-8">
               <TabsTrigger value="email">Email Scan</TabsTrigger>
               <TabsTrigger value="url">URL Scan</TabsTrigger>
@@ -69,7 +71,25 @@ export default function DashboardPage() {
           ) : scanResult ? (
             <>
               <RiskScoreCard result={scanResult} />
-              <ExplanationPanel explanation={scanResult.explanation} />
+              <ExplanationPanel 
+                explanation={scanResult.explanation} 
+                threatType={scanResult.threatType}
+              />
+              
+              {/* Recommended Actions */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-200 dark:border-slate-700">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
+                  Recommended Actions
+                </h3>
+                <ul className="space-y-2">
+                  {scanResult.recommendedActions.map((action, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <span className="text-blue-500 font-bold">•</span>
+                      <span>{action}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </>
           ) : (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-12 border border-slate-200 dark:border-slate-700 text-center">
@@ -82,5 +102,4 @@ export default function DashboardPage() {
       </div>
     </div>
   )
-  
 }

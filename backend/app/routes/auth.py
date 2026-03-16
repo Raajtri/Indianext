@@ -4,7 +4,7 @@ from typing import Optional
 import jwt
 from datetime import datetime, timedelta
 
-from app.db.supabase import supabase
+from app.database.supabase_client import supabase
 from app.config import settings
 from app.models.schemas import UserCreate, UserLogin, UserResponse
 
