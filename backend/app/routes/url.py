@@ -2,12 +2,12 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 
 from app.models.schemas import UrlScanRequest, ScanResponse
-from app.core.ml_client import ml_client
-from app.core.risk_score import calculate_risk_score
-from app.core.recommendations import get_recommendations
-from app.db.supabase import supabase
+from app.services.ml_client import ml_client
+from app.services.risk_score import calculate_risk_score
+from app.services.recommendations import get_recommendations
+from app.database.supabase_client import supabase
 from app.utils.helpers import extract_url_features
-from app.api.auth import get_current_user_optional
+from app.routes.auth import get_current_user_optional
 import logging
 
 router = APIRouter()

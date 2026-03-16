@@ -1,8 +1,8 @@
 from supabase import create_client, Client
 from app.config import settings
 from typing import Optional, Dict, Any
-import jwt
 from datetime import datetime
+
 
 class SupabaseClient:
     def __init__(self):
@@ -10,27 +10,31 @@ class SupabaseClient:
             settings.SUPABASE_URL,
             settings.SUPABASE_KEY
         )
+
         self.service_client: Client = create_client(
             settings.SUPABASE_URL,
             settings.SUPABASE_SERVICE_KEY
         )
-    
+
     def get_user_from_token(self, token: str) -> Optional[Dict]:
-        """Verify JWT token and get user"""
+        """Verify JWT token and return user info"""
         try:
-            # Verify with Supabase
             user = self.client.auth.get_user(token)
+
             if user and user.user:
                 return {
                     "id": user.user.id,
                     "email": user.user.email
                 }
+
         except Exception as e:
-            return None
+            print("Auth error:", e)
+
         return None
-    
-    async def save_scan(self, user_id: str, scan_data: Dict[str, Any]):
-        """Save scan result to database"""
+
+    def save_scan(self, user_id: str, scan_data: Dict[str, Any]):
+        """Save scan result in Supabase"""
+
         data = {
             "user_id": user_id,
             "input_type": scan_data["input_type"],
@@ -44,18 +48,24 @@ class SupabaseClient:
             "features": scan_data.get("features", {}),
             "created_at": datetime.utcnow().isoformat()
         }
-        
+
         result = self.service_client.table("scans").insert(data).execute()
         return result
-    
-    async def get_user_scans(self, user_id: str, limit: int = 10):
-        """Get user's scan history"""
-        result = self.service_client.table("scans")\
-            .select("*")\
-            .eq("user_id", user_id)\
-            .order("created_at", desc=True)\
-            .limit(limit)\
+
+    def get_user_scans(self, user_id: str, limit: int = 10):
+        """Get scan history for user"""
+
+        result = (
+            self.service_client
+            .table("scans")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
             .execute()
+        )
+
         return result.data
+
 
 supabase = SupabaseClient()

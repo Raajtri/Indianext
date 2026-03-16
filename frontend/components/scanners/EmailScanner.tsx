@@ -19,6 +19,7 @@ export function EmailScanner({ onScan, setIsLoading }: EmailScannerProps) {
   const onSubmit = async (data: EmailScanRequest) => {
     setIsLoading(true)
     try {
+      // data will now have the correct structure: { emailText, sender, subject }
       const result = await scanEmail(data)
       onScan(result)
     } catch (error) {
@@ -35,14 +36,14 @@ export function EmailScanner({ onScan, setIsLoading }: EmailScannerProps) {
           Paste Email Content
         </label>
         <textarea
-          {...register('emailText', { required: 'Email content is required' })}
+          {...register('emailText', { required: 'Email content is required' })} // Changed from email_text to emailText
           rows={8}
           className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="Paste the email content here..."
           value={emailText}
           onChange={(e) => setEmailText(e.target.value)}
         />
-        {errors.emailText && (
+        {errors.emailText && ( // Changed from email_text to emailText
           <p className="text-sm text-red-600 dark:text-red-400">{errors.emailText.message}</p>
         )}
       </div>

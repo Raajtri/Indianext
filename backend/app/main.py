@@ -5,7 +5,7 @@ import uvicorn
 from dotenv import load_dotenv
 import os
 
-from app.api import phishing, url, deepfake, auth
+from app.routes import phishing, url, deepfake, auth
 from app.config import settings
 
 load_dotenv()
