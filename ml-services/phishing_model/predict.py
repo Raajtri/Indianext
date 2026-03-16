@@ -1,48 +1,106 @@
 import joblib
+from explainable_ai.email_explain import explain_email
+from explainable_ai.suggestions import get_suggestions
 
-# Load trained model and vectorizer
+# ----------------------------
+# Load trained model
+# ----------------------------
 model = joblib.load("phishing_model.pkl")
 vectorizer = joblib.load("tfidf_vectorizer.pkl")
 
 print("📧 Phishing Email Detector Ready")
 
-# Take email input
-email = input("\nPaste email content:\n")
 
-# Convert email to TF-IDF features
-email_vec = vectorizer.transform([email])
+# ----------------------------
+# Email Scanner
+# ----------------------------
+def scan_email(email_text):
 
-# Predict
-prediction = model.predict(email_vec)[0]
-probability = model.predict_proba(email_vec)[0][1]
+    # Convert email to TF-IDF features
+    email_vec = vectorizer.transform([email_text])
 
-confidence = round(probability * 100, 2)
+    # ML prediction
+    prediction = model.predict(email_vec)[0]
+    probability = model.predict_proba(email_vec)[0][1]
 
-# Risk Level
-if confidence > 80:
-    risk = "HIGH"
-elif confidence > 50:
-    risk = "MEDIUM"
-else:
-    risk = "LOW"
+    confidence = round(probability * 100, 2)
 
-# Output
-print("\n🔎 Scan Result\n")
 
-if prediction == 1:
-    print("⚠️ PHISHING EMAIL DETECTED")
-else:
-    print("✅ SAFE EMAIL")
+    # ----------------------------
+    # Risk Level
+    # ----------------------------
+    if confidence > 80:
+        risk = "HIGH"
+        result = "⚠️ PHISHING EMAIL DETECTED"
+        prediction_label = "phishing"
 
-print("Risk Level:", risk)
-print("Confidence:", confidence, "%")
+    elif confidence > 50:
+        risk = "MEDIUM"
+        result = "⚠️ SUSPICIOUS EMAIL"
+        prediction_label = "phishing"
 
-# Recommended Action
-print("\nRecommended Action:")
+    else:
+        risk = "LOW"
+        result = "✅ SAFE EMAIL"
+        prediction_label = "safe"
 
-if prediction == 1:
-    print("- Do NOT click any links")
-    print("- Verify sender identity")
-    print("- Report email to security team")
-else:
-    print("- Email appears safe")
+
+    # ----------------------------
+    # Explainable AI
+    # ----------------------------
+    reasons = explain_email(email_text)
+
+    # Suggestions
+    suggestions = get_suggestions("email", prediction_label)
+
+
+    # Return structured result
+    return {
+        "result": result,
+        "confidence": confidence,
+        "risk_level": risk,
+        "reasons": reasons,
+        "suggestions": suggestions
+    }
+
+
+# ----------------------------
+# CLI Interface
+# ----------------------------
+while True:
+
+    email = input("\nPaste email content (or type exit):\n")
+
+    if email.lower() == "exit":
+        break
+
+    response = scan_email(email)
+
+    print("\n🔎 Scan Result")
+    print("-----------------------------")
+
+    print(response["result"])
+    print("Risk Level:", response["risk_level"])
+    print("Confidence:", response["confidence"], "%")
+
+
+    # ----------------------------
+    # Explainable AI Output
+    # ----------------------------
+    print("\nWhy this was flagged:")
+
+    if len(response["reasons"]) == 0:
+        print("- No suspicious indicators detected")
+
+    else:
+        for r in response["reasons"]:
+            print("-", r)
+
+
+    # ----------------------------
+    # Suggestions
+    # ----------------------------
+    print("\nRecommended Action:")
+
+    for s in response["suggestions"]:
+        print("-", s)
