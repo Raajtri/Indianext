@@ -19,7 +19,7 @@ export interface ScanResult {
 }
 
 export interface EmailScanRequest {
-  emailText: string
+  email_text: string
   sender?: string
   subject?: string
 }

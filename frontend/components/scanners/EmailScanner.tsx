@@ -13,8 +13,8 @@ interface EmailScannerProps {
 }
 
 export function EmailScanner({ onScan, setIsLoading }: EmailScannerProps) {
-  const { register, handleSubmit, formState: { errors } } = useForm<EmailScanRequest>()
-  const [emailText, setEmailText] = useState('')
+  const { register, handleSubmit, setValue, formState:{errors} } = useForm<EmailScanRequest>()
+  // const [emailText, setEmailText] = useState('')
 
   const onSubmit = async (data: EmailScanRequest) => {
     setIsLoading(true)
@@ -36,15 +36,13 @@ export function EmailScanner({ onScan, setIsLoading }: EmailScannerProps) {
           Paste Email Content
         </label>
         <textarea
-          {...register('emailText', { required: 'Email content is required' })} // Changed from email_text to emailText
-          rows={8}
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Paste the email content here..."
-          value={emailText}
-          onChange={(e) => setEmailText(e.target.value)}
-        />
-        {errors.emailText && ( // Changed from email_text to emailText
-          <p className="text-sm text-red-600 dark:text-red-400">{errors.emailText.message}</p>
+  {...register('email_text', { required: 'Email content is required' })}
+  rows={8}
+  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+  placeholder="Paste the email content here..."
+/>
+        {errors.email_text && ( // Changed from emailText to email_text
+          <p className="text-sm text-red-600 dark:text-red-400">{errors.email_text.message}</p>
         )}
       </div>
 
@@ -78,7 +76,7 @@ export function EmailScanner({ onScan, setIsLoading }: EmailScannerProps) {
         variant="default" 
         size="lg"
         className="w-full"
-        disabled={emailText.trim() === ''}
+        disabled = {false}
       >
         Scan Email
       </Button>
@@ -89,28 +87,31 @@ export function EmailScanner({ onScan, setIsLoading }: EmailScannerProps) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setEmailText(`Dear Valued Customer,
+            onClick={() =>
+  setValue(
+    "email_text",
+    `Dear Valued Customer,
 
-Your account has been temporarily suspended due to unusual activity. To restore access, please verify your information immediately:
-
-Click here: http://fake-bank-verify.com
-
-Failure to verify within 24 hours will result in permanent account closure.
-
-Sincerely,
-Security Team`)}
+Your account has been temporarily suspended...`
+  )
+}
             className="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
           >
             Phishing Example
           </button>
           <button
             type="button"
-            onClick={() => setEmailText(`Hi Team,
+            onClick={() =>
+  setValue(
+    "email_text",
+    `Hi Team,
 
 Attached is the Q4 report we discussed in yesterday's meeting. Please review and provide feedback by Friday.
 
 Best regards,
-John`)}
+John`
+  )
+}
             className="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
           >
             Safe Example

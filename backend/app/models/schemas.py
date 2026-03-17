@@ -16,9 +16,9 @@ class RiskLevel(str, Enum):
 
 # Request Models
 class EmailScanRequest(BaseModel):
-    email_text: str = Field(..., min_length=10, max_length=50000)
-    sender: Optional[EmailStr] = None
-    subject: Optional[str] = None
+    email_text: str
+    sender: Optional[str] = None
+    subject: Optional[str] = None   
 
 class UrlScanRequest(BaseModel):
     url: HttpUrl

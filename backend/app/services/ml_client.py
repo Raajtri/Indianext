@@ -62,7 +62,13 @@ class MLServiceClient:
         """Call your existing deepfake model service"""
         try:
             with open(file_path, 'rb') as f:
-                files = {'file': (os.path.basename(file_path), f, 'application/octet-stream')}
+                files = {
+    'file': (
+        os.path.basename(file_path),
+        f,
+        'image/jpeg'  # 🔥 IMPORTANT
+    )
+}
                 
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     response = await client.post(

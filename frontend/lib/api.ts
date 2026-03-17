@@ -19,7 +19,7 @@ export async function scanEmail(data: EmailScanRequest): Promise<ScanResult> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email_text: data.emailText,
+        email_text: data.email_text,
         sender: data.sender,
         subject: data.subject
       }),
@@ -255,9 +255,9 @@ export async function checkBackendHealth(): Promise<boolean> {
 // Mock Email Scan
 export async function mockScanEmail(data: EmailScanRequest): Promise<ScanResult> {
   await new Promise(resolve => setTimeout(resolve, 2000))
-  
-  const text = data.emailText.toLowerCase()
-  
+
+  const text = data.email_text.toLowerCase() // Changed from email_text to emailText
+
   const phishingIndicators = {
     urgentKeywords: ['urgent', 'immediately', 'suspended', 'verify', 'click here', 'action required'],
     suspiciousLinks: text.match(/https?:\/\/[^\s]+/g) || [],
