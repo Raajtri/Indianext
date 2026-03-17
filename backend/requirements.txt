@@ -1,7 +1,13 @@
 fastapi
 uvicorn
+pydantic[email]
 supabase
-httpx
-python-multipart
-pydantic
 python-dotenv
+joblib
+scikit-learn
+lightgbm
+tensorflow
+mtcnn
+opencv-python
+tldextract
+python-multipart
